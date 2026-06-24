@@ -1,0 +1,50 @@
+name: Test custom output path
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_REF: refs/heads/main
+      GITHUB_EVENT_NAME: push
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Set up local git remote for push
+        run: |
+          # Create a bare repo to act as the remote so git push succeeds
+          git init --bare /tmp/remote-repo.git
+          git remote set-url origin /tmp/remote-repo.git
+          # Make sure we're on a branch so push works
+          git checkout -b main 2>/dev/null || git checkout main
+          # Create the output directory
+          mkdir -p custom
+
+      - id: action
+        uses: .
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          username: octocat
+          output-path: custom/shooter.gif
+          strategy: column
+          fps: '20'
+          no-amend: 'true'
+
+      - name: Assert output-file matches custom path
+        env:
+          ACTUAL: ${{ steps.action.outputs.output-file }}
+        run: |
+          echo "actual: $ACTUAL"
+          if [ "$ACTUAL" != "custom/shooter.gif" ]; then
+            echo "FAIL: expected 'custom/shooter.gif', got '$ACTUAL'"
+            exit 1
+          fi
+          echo "PASS"
+
+      - name: Assert custom output file exists
+        run: |
+          if [ ! -f "custom/shooter.gif" ]; then
+            echo "FAIL: expected custom/shooter.gif to exist"
+            exit 1
+          fi
+          echo "PASS: custom/shooter.gif exists"

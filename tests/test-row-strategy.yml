@@ -1,0 +1,49 @@
+name: Test row strategy
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_REF: refs/heads/main
+      GITHUB_EVENT_NAME: push
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Set up local git remote for push
+        run: |
+          # Create a bare repo to act as the remote so git push succeeds
+          git init --bare /tmp/remote-repo.git
+          git remote set-url origin /tmp/remote-repo.git
+          # Make sure we're on a branch so push works
+          git checkout -b main 2>/dev/null || git checkout main
+
+      - id: action
+        uses: .
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          username: octocat
+          output-path: row-strategy.gif
+          strategy: row
+          fps: '30'
+          no-amend: 'true'
+          commit-message: 'chore: update space shooter GIF'
+
+      - name: Assert output-file is set correctly
+        env:
+          ACTUAL: ${{ steps.action.outputs.output-file }}
+        run: |
+          echo "actual: $ACTUAL"
+          if [ "$ACTUAL" != "row-strategy.gif" ]; then
+            echo "FAIL: expected 'row-strategy.gif', got '$ACTUAL'"
+            exit 1
+          fi
+          echo "PASS"
+
+      - name: Assert row strategy output file exists
+        run: |
+          if [ ! -f "row-strategy.gif" ]; then
+            echo "FAIL: expected row-strategy.gif to exist"
+            exit 1
+          fi
+          echo "PASS: row-strategy.gif exists"
