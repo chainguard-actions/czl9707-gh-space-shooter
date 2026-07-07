@@ -12,6 +12,7 @@ Hardened by [Chainguard](https://www.chainguard.dev) from the upstream action at
 | v2.0.0 | [`v2.0.0`](https://github.com/chainguard-actions/czl9707-gh-space-shooter/tree/v2.0.0) | [`904cd93`](https://github.com/czl9707/gh-space-shooter/commit/904cd93e3b3cb73f230652ab67b271fa7d19a86b) |
 | v2.0.2 | [`v2.0.2`](https://github.com/chainguard-actions/czl9707-gh-space-shooter/tree/v2.0.2) | [`64e5151`](https://github.com/czl9707/gh-space-shooter/commit/64e515174a6a22785ad1d849b9fa989fec693771) |
 | v2.0.3 | [`v2.0.3`](https://github.com/chainguard-actions/czl9707-gh-space-shooter/tree/v2.0.3) | [`040c254`](https://github.com/czl9707/gh-space-shooter/commit/040c254c140290d8b4a40f471c8eed25645e2b04) |
+| v2.0.4 | [`v2.0.4`](https://github.com/chainguard-actions/czl9707-gh-space-shooter/tree/v2.0.4) | [`6b94597`](https://github.com/czl9707/gh-space-shooter/commit/6b945979b0cf53e7887e62d32fddcdb5bccbed89) |
 
 ## Privacy
 
