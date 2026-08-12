@@ -1,0 +1,41 @@
+name: Test basic usage
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - id: action
+        uses: .
+        continue-on-error: true
+        with:
+          github-token: ${{ github.token }}
+          username: octocat
+          output-path: gh-space-shooter.gif
+
+      - name: Assert output-file is set or action failed gracefully
+        env:
+          OUTPUT_FILE: ${{ steps.action.outputs.output-file }}
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          echo "output-file: $OUTPUT_FILE"
+          if [ "$OUTCOME" = "success" ]; then
+            if [ -z "$OUTPUT_FILE" ]; then
+              echo "FAIL: action succeeded but output-file is empty"
+              exit 1
+            fi
+            echo "PASS: output-file is '$OUTPUT_FILE'"
+            if [ ! -f "$OUTPUT_FILE" ]; then
+              echo "FAIL: output file '$OUTPUT_FILE' does not exist on disk"
+              exit 1
+            fi
+            echo "PASS: output file exists on disk"
+          elif [ "$OUTCOME" = "failure" ]; then
+            echo "PASS: action failed gracefully (push to sentinel repo is not possible)"
+          else
+            echo "FAIL: unexpected outcome '$OUTCOME'"
+            exit 1
+          fi

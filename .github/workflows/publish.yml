@@ -1,0 +1,60 @@
+name: Publish to PyPI
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_type:
+        description: "Release Type"
+        required: true
+        type: choice
+        default: "patch"
+        options:
+        - major
+        - minor
+        - patch
+
+env:
+  PYTHON_LATEST: 3.12
+
+jobs:
+  build:
+    name: Publish
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      pull-requests: read
+      contents: write
+
+    steps:
+    - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+
+    - name: Install uv
+      uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
+
+    - name: Install Python ${{ env.PYTHON_LATEST }}
+      run: uv python install "$PYTHON_LATEST"
+
+    - name: Bump version
+      id: bump
+      uses: callowayproject/bump-my-version@3842e1f4911f242ffde0e08488925ed7933debe7 # master
+      env:
+        BUMPVERSION_TAG: "false"
+      with:
+        args: ${{ inputs.release_type }}
+        github-token: ${{ secrets.GH_TOKEN }}
+    
+    - name: Build
+      run: uv build
+
+    - name: Publish to PyPI
+      uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33 # release/v1
+
+    - name: GitHub Release PIP v${{ steps.bump.outputs.current-version }}
+      uses: ncipollo/release-action@339a81892b84b4eeb0f6e744e4574d79d0d9b8dd # v1
+      with:
+        name: gh-space-shooter pypi v${{ steps.bump.outputs.current-version }}
+        tag: v${{ steps.bump.outputs.current-version }}
+        body: "Automated release of pypi version v${{ steps.bump.outputs.current-version }}"
+        artifacts: dist/*
+        token: ${{ secrets.GH_TOKEN }}
+        generateReleaseNotes: true
