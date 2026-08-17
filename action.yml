@@ -79,8 +79,8 @@ runs:
           --output "$INPUT_OUTPUT_PATH" \
           --strategy "$INPUT_STRATEGY" \
           --fps "$INPUT_FPS"
-        safe_output_path=$(printf '%s' "$INPUT_OUTPUT_PATH" | tr -d '\n\r')
-        echo "output-file=$safe_output_path" >> "$GITHUB_OUTPUT"
+        safe_output=$(printf '%s' "$INPUT_OUTPUT_PATH" | tr -d '\n\r')
+        echo "output-file=$safe_output" >> "$GITHUB_OUTPUT"
     - name: Commit and push
       shell: bash
       env:

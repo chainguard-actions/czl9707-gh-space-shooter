@@ -1,4 +1,4 @@
-name: Test basic usage
+name: Test custom output path and column strategy
 on:
   workflow_dispatch:
 jobs:
@@ -45,29 +45,27 @@ jobs:
         with:
           github-token: ${{ github.token }}
           username: ${{ github.repository_owner }}
-          output-path: 'gh-space-shooter.gif'
-          strategy: 'random'
+          output-path: 'custom-shooter.gif'
+          strategy: 'column'
           fps: '10'
           no-amend: 'true'
+          commit-message: 'Test: custom output path'
 
-      - name: Assert output-file is set
+      - name: Assert output-file matches custom path
         env:
           ACTUAL: ${{ steps.action.outputs.output-file }}
         run: |
           echo "actual: $ACTUAL"
-          if [ -z "$ACTUAL" ]; then
-            echo "FAIL: output-file output is empty"
+          if [ "$ACTUAL" != "custom-shooter.gif" ]; then
+            echo "FAIL: expected 'custom-shooter.gif' but got '$ACTUAL'"
             exit 1
           fi
-          echo "PASS: output-file=$ACTUAL"
+          echo "PASS: output-file matches custom path"
 
-      - name: Assert GIF file exists
-        env:
-          OUTPUT: ${{ steps.action.outputs.output-file }}
+      - name: Assert custom GIF file exists
         run: |
-          echo "Checking for file: $OUTPUT"
-          if [ ! -f "$OUTPUT" ]; then
-            echo "FAIL: expected GIF file not found at $OUTPUT"
+          if [ ! -f "custom-shooter.gif" ]; then
+            echo "FAIL: expected custom GIF file not found at custom-shooter.gif"
             exit 1
           fi
-          echo "PASS: GIF file exists at $OUTPUT"
+          echo "PASS: custom GIF file exists"

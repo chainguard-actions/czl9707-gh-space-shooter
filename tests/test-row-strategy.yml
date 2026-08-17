@@ -1,4 +1,4 @@
-name: Test basic usage
+name: Test row strategy
 on:
   workflow_dispatch:
 jobs:
@@ -45,29 +45,27 @@ jobs:
         with:
           github-token: ${{ github.token }}
           username: ${{ github.repository_owner }}
-          output-path: 'gh-space-shooter.gif'
-          strategy: 'random'
+          output-path: 'row-strategy.gif'
+          strategy: 'row'
           fps: '10'
           no-amend: 'true'
+          commit-message: 'Test: row strategy'
 
-      - name: Assert output-file is set
+      - name: Assert output-file is set correctly
         env:
           ACTUAL: ${{ steps.action.outputs.output-file }}
         run: |
           echo "actual: $ACTUAL"
-          if [ -z "$ACTUAL" ]; then
-            echo "FAIL: output-file output is empty"
+          if [ "$ACTUAL" != "row-strategy.gif" ]; then
+            echo "FAIL: expected 'row-strategy.gif' but got '$ACTUAL'"
             exit 1
           fi
-          echo "PASS: output-file=$ACTUAL"
+          echo "PASS: output-file is correct"
 
-      - name: Assert GIF file exists
-        env:
-          OUTPUT: ${{ steps.action.outputs.output-file }}
+      - name: Assert row strategy GIF file exists
         run: |
-          echo "Checking for file: $OUTPUT"
-          if [ ! -f "$OUTPUT" ]; then
-            echo "FAIL: expected GIF file not found at $OUTPUT"
+          if [ ! -f "row-strategy.gif" ]; then
+            echo "FAIL: expected GIF file not found at row-strategy.gif"
             exit 1
           fi
-          echo "PASS: GIF file exists at $OUTPUT"
+          echo "PASS: row strategy GIF file exists"

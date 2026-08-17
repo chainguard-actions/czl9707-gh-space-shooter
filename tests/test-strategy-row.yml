@@ -1,0 +1,54 @@
+name: Test row strategy
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_REF: refs/heads/main
+      GITHUB_EVENT_NAME: push
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Set up local git remote for push
+        run: |
+          # Create a bare repo to act as the remote so git push succeeds
+          git init --bare /tmp/remote-repo.git
+          git remote remove origin 2>/dev/null || true
+          git remote add origin /tmp/remote-repo.git
+          # Push current HEAD to main branch in remote
+          git push origin HEAD:main
+          # Configure push.default so 'git push' works without explicit branch
+          git config push.default current
+          # Ensure we are on a named branch
+          git checkout -B main 2>/dev/null || true
+          git branch --set-upstream-to=origin/main main 2>/dev/null || true
+
+      - id: action
+        uses: .
+        with:
+          github-token: ${{ github.token }}
+          username: octocat
+          output-path: row-strategy.gif
+          strategy: row
+          fps: '30'
+          no-amend: 'true'
+
+      - name: Assert output-file equals expected path
+        env:
+          ACTUAL: ${{ steps.action.outputs.output-file }}
+        run: |
+          echo "actual: $ACTUAL"
+          if [ "$ACTUAL" != "row-strategy.gif" ]; then
+            echo "FAIL: expected 'row-strategy.gif', got '$ACTUAL'"
+            exit 1
+          fi
+          echo "PASS"
+
+      - name: Assert GIF file exists
+        run: |
+          if [ ! -f "row-strategy.gif" ]; then
+            echo "FAIL: expected row-strategy.gif to exist"
+            exit 1
+          fi
+          echo "PASS: row-strategy.gif exists"
