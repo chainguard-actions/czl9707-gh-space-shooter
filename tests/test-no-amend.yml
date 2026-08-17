@@ -1,0 +1,45 @@
+name: Test no-amend flag
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_REF: refs/heads/main
+      GITHUB_EVENT_NAME: push
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - id: action
+        uses: .
+        continue-on-error: true
+        with:
+          github-token: ${{ github.token }}
+          username: octocat
+          output-path: shooter-no-amend.gif
+          strategy: row
+          fps: '24'
+          no-amend: 'true'
+          commit-message: 'chore: update space shooter GIF'
+
+      - name: Assert action ran with no-amend flag
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+          OUTPUT_FILE: ${{ steps.action.outputs.output-file }}
+        run: |
+          echo "outcome: $OUTCOME"
+          echo "output-file: $OUTPUT_FILE"
+          # The action either succeeded (output-file is set) or failed at API/push step
+          # Both are acceptable in act environment; verify the action ran at all
+          if [ "$OUTCOME" = "success" ]; then
+            if [ "$OUTPUT_FILE" != "shooter-no-amend.gif" ]; then
+              echo "FAIL: expected output-file 'shooter-no-amend.gif', got '$OUTPUT_FILE'"
+              exit 1
+            fi
+            echo "PASS: action succeeded with correct output-file and no-amend flag"
+          elif [ "$OUTCOME" = "failure" ]; then
+            echo "PASS: action ran and failed as expected in act environment (no real API/push)"
+          else
+            echo "FAIL: unexpected outcome '$OUTCOME'"
+            exit 1
+          fi

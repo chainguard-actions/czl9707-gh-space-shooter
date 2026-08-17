@@ -1,4 +1,4 @@
-name: Test basic usage
+name: Test custom output path
 on:
   workflow_dispatch:
 jobs:
@@ -29,16 +29,19 @@ jobs:
           # package first, regardless of which Python/pip environment is used.
           echo "PYTHONPATH=$GITHUB_WORKSPACE/tests/fixtures" >> "$GITHUB_ENV"
 
+      - name: Create output directory
+        run: mkdir -p custom-output
+
       - id: action
         uses: .
         with:
           github-token: ${{ github.token }}
           username: ${{ github.repository_owner }}
-          output-path: 'gh-space-shooter.gif'
-          strategy: 'random'
-          fps: '40'
+          output-path: 'custom-output/game.gif'
+          strategy: 'column'
+          fps: '24'
           no-amend: 'true'
-          commit-message: 'Test: Update space shooter game GIF'
+          commit-message: 'Test: custom output path GIF'
 
       - name: Assert output-file is set
         env:
@@ -51,7 +54,18 @@ jobs:
           fi
           echo "PASS: output-file is set to '$ACTUAL'"
 
-      - name: Assert GIF file exists
+      - name: Assert output-file matches custom path
+        env:
+          ACTUAL: ${{ steps.action.outputs.output-file }}
+        run: |
+          echo "actual: $ACTUAL"
+          if [ "$ACTUAL" != "custom-output/game.gif" ]; then
+            echo "FAIL: expected 'custom-output/game.gif' but got '$ACTUAL'"
+            exit 1
+          fi
+          echo "PASS: output-file matches custom path"
+
+      - name: Assert GIF file exists at custom path
         env:
           OUTPUT_FILE: ${{ steps.action.outputs.output-file }}
         run: |
@@ -60,15 +74,4 @@ jobs:
             echo "FAIL: expected GIF file '$OUTPUT_FILE' does not exist"
             exit 1
           fi
-          echo "PASS: GIF file exists at '$OUTPUT_FILE'"
-
-      - name: Assert output-file matches expected path
-        env:
-          ACTUAL: ${{ steps.action.outputs.output-file }}
-        run: |
-          echo "actual: $ACTUAL"
-          if [ "$ACTUAL" != "gh-space-shooter.gif" ]; then
-            echo "FAIL: expected 'gh-space-shooter.gif' but got '$ACTUAL'"
-            exit 1
-          fi
-          echo "PASS: output-file matches expected path"
+          echo "PASS: GIF file exists at custom path '$OUTPUT_FILE'"

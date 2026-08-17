@@ -1,4 +1,4 @@
-name: Test basic usage
+name: Test row strategy
 on:
   workflow_dispatch:
 jobs:
@@ -34,11 +34,11 @@ jobs:
         with:
           github-token: ${{ github.token }}
           username: ${{ github.repository_owner }}
-          output-path: 'gh-space-shooter.gif'
-          strategy: 'random'
-          fps: '40'
+          output-path: 'row-strategy.gif'
+          strategy: 'row'
+          fps: '30'
           no-amend: 'true'
-          commit-message: 'Test: Update space shooter game GIF'
+          commit-message: 'Test: row strategy GIF'
 
       - name: Assert output-file is set
         env:
@@ -67,8 +67,8 @@ jobs:
           ACTUAL: ${{ steps.action.outputs.output-file }}
         run: |
           echo "actual: $ACTUAL"
-          if [ "$ACTUAL" != "gh-space-shooter.gif" ]; then
-            echo "FAIL: expected 'gh-space-shooter.gif' but got '$ACTUAL'"
+          if [ "$ACTUAL" != "row-strategy.gif" ]; then
+            echo "FAIL: expected 'row-strategy.gif' but got '$ACTUAL'"
             exit 1
           fi
           echo "PASS: output-file matches expected path"
