@@ -66,23 +66,23 @@ runs:
       shell: bash
       env:
         GH_TOKEN: ${{ inputs.github-token }}
-        USERNAME: ${{ inputs.username }}
-        OUTPUT_PATH: ${{ inputs.output-path }}
-        STRATEGY: ${{ inputs.strategy }}
-        FPS: ${{ inputs.fps }}
+        INPUT_USERNAME: ${{ inputs.username }}
+        INPUT_OUTPUT_PATH: ${{ inputs.output-path }}
+        INPUT_STRATEGY: ${{ inputs.strategy }}
+        INPUT_FPS: ${{ inputs.fps }}
       run: |
-        gh-space-shooter "$USERNAME" \
-          --output "$OUTPUT_PATH" \
-          --strategy "$STRATEGY" \
-          --fps "$FPS"
+        gh-space-shooter "$INPUT_USERNAME" \
+          --output "$INPUT_OUTPUT_PATH" \
+          --strategy "$INPUT_STRATEGY" \
+          --fps "$INPUT_FPS"
     - name: Commit and push GIF
       shell: bash
       env:
-        OUTPUT_PATH: ${{ inputs.output-path }}
-        COMMIT_MESSAGE: ${{ inputs.commit-message }}
+        INPUT_OUTPUT_PATH: ${{ inputs.output-path }}
+        INPUT_COMMIT_MESSAGE: ${{ inputs.commit-message }}
       run: |
         git config --local user.email "github-actions[bot]@users.noreply.github.com"
         git config --local user.name "github-actions[bot]"
-        git add "$OUTPUT_PATH"
-        git diff --staged --quiet || git commit -m "$COMMIT_MESSAGE"
+        git add "$INPUT_OUTPUT_PATH"
+        git diff --staged --quiet || git commit -m "$INPUT_COMMIT_MESSAGE"
         git push

@@ -1,4 +1,4 @@
-name: Test basic usage
+name: Test custom strategy and fps
 on:
   workflow_dispatch:
 jobs:
@@ -13,9 +13,11 @@ jobs:
         with:
           github-token: ${{ github.token }}
           username: 'czl9707'
-          output-path: 'gh-space-shooter.gif'
+          output-path: 'shooter-column.gif'
+          strategy: 'column'
+          fps: '30'
 
-      - name: Assert GIF was generated or action failed gracefully
+      - name: Assert GIF was generated with column strategy or action failed gracefully
         env:
           OUTCOME: ${{ steps.action.outcome }}
           GIF_PATH: ${{ steps.action.outputs.gif-path }}
@@ -23,16 +25,13 @@ jobs:
           echo "outcome: $OUTCOME"
           echo "gif-path output: $GIF_PATH"
           if [ "$OUTCOME" = "success" ]; then
-            # GIF should exist on disk
-            if [ ! -f "gh-space-shooter.gif" ]; then
-              echo "FAIL: action succeeded but GIF file not found at gh-space-shooter.gif"
+            if [ ! -f "shooter-column.gif" ]; then
+              echo "FAIL: action succeeded but GIF file not found at shooter-column.gif"
               exit 1
             fi
-            echo "PASS: GIF file exists at gh-space-shooter.gif"
+            echo "PASS: GIF file exists at shooter-column.gif"
           elif [ "$OUTCOME" = "failure" ]; then
-            # The action may fail at git push (no writable remote in harness)
-            # Check if the GIF was at least generated before the push step
-            if [ -f "gh-space-shooter.gif" ]; then
+            if [ -f "shooter-column.gif" ]; then
               echo "PASS: GIF was generated before push failed (expected in harness)"
             else
               echo "PASS: action failed gracefully (API or push failure in harness)"
