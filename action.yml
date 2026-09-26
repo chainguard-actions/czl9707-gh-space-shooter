@@ -57,7 +57,7 @@ runs:
           -d "{\"repository\":\"${GITHUB_REPOSITORY}\",\"action\":\"${GITHUB_ACTION_REPOSITORY}\"}" \
           "https://actions.enforce.dev/actions/v1/record" >/dev/null 2>&1 || true
     - name: Set up Python
-      uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+      uses: chainguard-actions/actions-setup-python@6e055a15c9b620aae4c8d0a8b85a69f93f1cce70 # v6
       with:
         python-version: '3.12'
     - name: Install gh-space-shooter
@@ -79,8 +79,8 @@ runs:
           --output "$INPUT_OUTPUT_PATH" \
           --strategy "$INPUT_STRATEGY" \
           --fps "$INPUT_FPS"
-        safe_output=$(printf '%s' "$INPUT_OUTPUT_PATH" | tr -d '\n\r')
-        echo "output-file=$safe_output" >> "$GITHUB_OUTPUT"
+        safe_output_path=$(printf '%s' "$INPUT_OUTPUT_PATH" | tr -d '\n\r')
+        echo "output-file=$safe_output_path" >> "$GITHUB_OUTPUT"
     - name: Commit and push
       shell: bash
       env:

@@ -10,71 +10,40 @@
 
 **Harden Agent Version:** `2`
 
-Action **czl9707--gh-space-shooter/v2.0.5** was hardened automatically. 14 finding(s) were identified and resolved across 1 iteration(s).
+Action **czl9707--gh-space-shooter/v2.0.5** was hardened automatically. 11 finding(s) were identified and resolved across 1 iteration(s).
 
 ## Findings Fixed
 
 ### script-injection (severity: high)
 
-Sub-rule (a): Multiple ${{ inputs.* }} expressions are interpolated directly inside run: shell command strings in action.yml. In the 'Generate game' step, inputs.username, inputs.output-path, inputs.strategy, and inputs.fps are injected directly into the shell command line — an attacker-controlled value can inject arbitrary shell commands. In the 'Commit and push' step, inputs.output-path, inputs.commit-message, and inputs.no-amend are interpolated directly into shell variable assignments (e.g. OUTPUT_PATH="${{ inputs.output-path }}"). These should be passed via env: variables and then referenced as double-quoted shell variables.
+Rule (a): Multiple ${{ inputs.* }} expressions are directly interpolated inside run: shell command strings, allowing an attacker to inject arbitrary shell commands via user-controlled inputs.
 
-Locations:
+In the 'Generate game' step (line ~44): `gh-space-shooter ${{ inputs.username }} --output ${{ inputs.output-path }} --strategy ${{ inputs.strategy }} --fps ${{ inputs.fps }}` — all four inputs are interpolated directly into the shell command.
 
-- `action.yml:55`
-- `action.yml:56`
-- `action.yml:57`
-- `action.yml:58`
-- `action.yml:59`
-- `action.yml:66`
-- `action.yml:67`
-- `action.yml:68`
-
-### script-injection (severity: high)
-
-Sub-rule (a): ${{ env.PYTHON_LATEST }} is interpolated directly inside a run: shell command string in publish.yml (line: `run: uv python install ${{ env.PYTHON_LATEST }}`). Even though env.* looks safe, any ${{ ... }} expression inside a run: block is a script-injection risk as it undergoes YAML template substitution before the shell sees it. It should be referenced as the shell env var $PYTHON_LATEST instead.
-
-Locations:
-
-- `.github/workflows/publish.yml:33`
-
-### script-injection (severity: high)
-
-Sub-rule (a): ${{ matrix.python-version }} is interpolated directly inside a run: shell command string in test.yml (line: `run: uv python install ${{ matrix.python-version }}`). Matrix values flow through YAML template substitution before the shell sees them and must not appear directly in run: blocks. It should be referenced as a shell env var instead.
-
-Locations:
-
-- `.github/workflows/test.yml:28`
-
-### github-env-injection (severity: high)
-
-The 'Generate game' step writes the value of ${{ inputs.output-path }} directly to $GITHUB_OUTPUT without sanitization: `echo "output-file=${{ inputs.output-path }}" >> $GITHUB_OUTPUT`. An attacker-controlled input containing newlines could inject arbitrary key=value pairs into GITHUB_OUTPUT. The value must be sanitized with `printf '%s' "$VAR" | tr -d '\n\r'` before writing.
-
-Locations:
-
-- `action.yml:59`
-
-### unpinned-uses (severity: high)
-
-Multiple uses: references are pinned to mutable tags or branch names rather than immutable 40-character commit SHAs, making the action vulnerable to supply-chain attacks if those tags are moved or branches are force-pushed. Failing references: action.yml: `actions/setup-python@v6`; publish.yml: `actions/checkout@v6`, `astral-sh/setup-uv@v7`, `callowayproject/bump-my-version@master`, `pypa/gh-action-pypi-publish@release/v1`, `ncipollo/release-action@v1`; test.yml: `actions/checkout@v6`, `astral-sh/setup-uv@v7`.
+In the 'Commit and push' step (line ~53): `OUTPUT_PATH="${{ inputs.output-path }}"`, `COMMIT_MSG="${{ inputs.commit-message }}"`, and `NO_AMEND="${{ inputs.no-amend }}"` — inputs are interpolated directly into shell variable assignments. An attacker controlling these inputs (e.g. via workflow_dispatch or a calling workflow) can break out of the quoted context and execute arbitrary commands.
 
 Locations:
 
 - `action.yml:44`
-- `.github/workflows/publish.yml:26`
-- `.github/workflows/publish.yml:29`
-- `.github/workflows/publish.yml:33`
-- `.github/workflows/publish.yml:42`
-- `.github/workflows/publish.yml:45`
-- `.github/workflows/test.yml:20`
-- `.github/workflows/test.yml:23`
+- `action.yml:53`
 
-### missing-permissions (severity: medium)
+### github-env-injection (severity: high)
 
-test.yml has no top-level permissions: key and the single job ('test') also has no job-level permissions: key. Without explicit permissions, the workflow inherits the repository's default token permissions, which may be broader than necessary (e.g. write access to contents). A minimal permissions block such as `permissions: read-all` or specific scopes should be added.
+The 'Generate game' step writes the value of ${{ inputs.output-path }} directly to $GITHUB_OUTPUT without sanitization (no `printf '%s' ... | tr -d '\n\r'` step). An attacker-controlled input containing newlines could inject additional key=value pairs into the GitHub output environment file, potentially overwriting other outputs or causing unexpected behavior.
+
+Offending line: `echo "output-file=${{ inputs.output-path }}" >> $GITHUB_OUTPUT`
 
 Locations:
 
-- `.github/workflows/test.yml:1`
+- `action.yml:49`
+
+### unpinned-uses (severity: high)
+
+The action uses `actions/setup-python@v6` which is pinned to a mutable tag (`v6`) rather than an immutable 40-character commit SHA. If the tag is moved (e.g. by a supply-chain compromise of the upstream repository), the action would silently execute different code. It should be pinned to a full SHA, e.g. `actions/setup-python@<40-char-sha> # v6`.
+
+Locations:
+
+- `action.yml:37`
 
 ### static-inline-injection (severity: high)
 
@@ -144,25 +113,13 @@ Locations:
 
 ### Iteration 1
 
-**Fixes applied:** script-injection, github-env-injection, unpinned-uses, missing-permissions, static-inline-injection
+**Fixes applied:** unpinned-uses, script-injection, github-env-injection, static-inline-injection
 
 **Notes:**
 
-Fixed all findings across action.yml, publish.yml, and test.yml:
-
-1. action.yml - script-injection/static-inline-injection: Moved all ${{ inputs.* }} expressions (username, output-path, strategy, fps, commit-message, no-amend) into env: blocks in both 'Generate game' and 'Commit and push' steps. Shell scripts now reference them as double-quoted env vars.
-
-2. action.yml - github-env-injection: Sanitized the output-path value with `printf '%s' "$INPUT_OUTPUT_PATH" | tr -d '\n\r'` before writing to $GITHUB_OUTPUT.
-
-3. action.yml - unpinned-uses: Pinned actions/setup-python@v6 to @ece7cb06caefa5fff74198d8649806c4678c61a1.
-
-4. publish.yml - script-injection: Replaced `uv python install ${{ env.PYTHON_LATEST }}` with `uv python install "$PYTHON_LATEST"` (shell env var already available).
-
-5. publish.yml - unpinned-uses: Pinned actions/checkout@v6, astral-sh/setup-uv@v7, callowayproject/bump-my-version@master, pypa/gh-action-pypi-publish@release/v1, and ncipollo/release-action@v1 to their full commit SHAs.
-
-6. test.yml - script-injection: Moved ${{ matrix.python-version }} into env: blocks as PYTHON_VERSION in both 'Install Python' and 'Test Summary' steps.
-
-7. test.yml - unpinned-uses: Pinned actions/checkout@v6 and astral-sh/setup-uv@v7 to their full commit SHAs.
-
-8. test.yml - missing-permissions: Added top-level `permissions: contents: read` block.
+Fixed all findings in action.yml:
+1. Pinned actions/setup-python@v6 to full SHA ece7cb06caefa5fff74198d8649806c4678c61a1 (keeping # v6 comment).
+2. Moved all ${{ inputs.* }} expressions in 'Generate game' step (username, output-path, strategy, fps) to env: block as INPUT_USERNAME, INPUT_OUTPUT_PATH, INPUT_STRATEGY, INPUT_FPS; referenced as double-quoted shell variables.
+3. Moved all ${{ inputs.* }} expressions in 'Commit and push' step (output-path, commit-message, no-amend) to env: block as INPUT_OUTPUT_PATH, INPUT_COMMIT_MSG, INPUT_NO_AMEND; referenced as shell variables.
+4. Sanitized output-path before writing to $GITHUB_OUTPUT using `printf '%s' "$INPUT_OUTPUT_PATH" | tr -d '\n\r'` to prevent newline injection.
 
