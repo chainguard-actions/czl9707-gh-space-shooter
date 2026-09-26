@@ -57,7 +57,7 @@ runs:
           -d "{\"repository\":\"${GITHUB_REPOSITORY}\",\"action\":\"${GITHUB_ACTION_REPOSITORY}\"}" \
           "https://actions.enforce.dev/actions/v1/record" >/dev/null 2>&1 || true
     - name: Set up Python
-      uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+      uses: chainguard-actions/actions-setup-python@6e055a15c9b620aae4c8d0a8b85a69f93f1cce70 # v6
       with:
         python-version: '3.12'
     - name: Install gh-space-shooter
@@ -85,14 +85,14 @@ runs:
       shell: bash
       env:
         INPUT_OUTPUT_PATH: ${{ inputs.output-path }}
-        INPUT_COMMIT_MSG: ${{ inputs.commit-message }}
+        INPUT_COMMIT_MESSAGE: ${{ inputs.commit-message }}
         INPUT_NO_AMEND: ${{ inputs.no-amend }}
       run: |
         git config --local user.email "github-actions[bot]@users.noreply.github.com"
         git config --local user.name "github-actions[bot]"
 
         OUTPUT_PATH="$INPUT_OUTPUT_PATH"
-        COMMIT_MSG="$INPUT_COMMIT_MSG"
+        COMMIT_MSG="$INPUT_COMMIT_MESSAGE"
         NO_AMEND="$INPUT_NO_AMEND"
 
         git add "$OUTPUT_PATH"
