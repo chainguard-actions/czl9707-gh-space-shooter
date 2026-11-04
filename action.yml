@@ -1,9 +1,11 @@
 name: 'GitHub Space Shooter'
 description: 'Transform your GitHub contribution graph into a space shooter game GIF'
 author: 'zane'
+
 branding:
   icon: 'navigation-2'
   color: 'black'
+
 inputs:
   github-token:
     description: 'GitHub token for fetching contribution data (usually secrets.GITHUB_TOKEN)'
@@ -32,10 +34,12 @@ inputs:
     description: 'Commit message for the GIF update'
     required: false
     default: 'Update space shooter game GIF'
+
 outputs:
   output-file:
     description: 'Path to the generated output file (GIF or WebP)'
     value: ${{ steps.generate.outputs.output-file }}
+
 runs:
   using: 'composite'
   steps:
@@ -60,11 +64,13 @@ runs:
       uses: chainguard-actions/actions-setup-python@6e055a15c9b620aae4c8d0a8b85a69f93f1cce70 # v6
       with:
         python-version: '3.12'
+
     - name: Install gh-space-shooter
       shell: bash
       run: |
         python -m pip install --upgrade pip
         pip install gh-space-shooter
+
     - name: Generate game
       id: generate
       shell: bash
@@ -81,6 +87,7 @@ runs:
           --fps "$INPUT_FPS"
         safe_output_path=$(printf '%s' "$INPUT_OUTPUT_PATH" | tr -d '\n\r')
         echo "output-file=$safe_output_path" >> "$GITHUB_OUTPUT"
+
     - name: Commit and push
       shell: bash
       env:
@@ -100,7 +107,7 @@ runs:
         SHOULD_AMEND="false"
         if [ "$NO_AMEND" != "true" ]; then
           git log -1 --oneline
-
+        
           LAST_MSG=$(git log -1 --pretty=%s 2>/dev/null || echo "")
           LAST_FILES=$(git log -1 --name-only --pretty=format: 2>/dev/null | grep -v '^$' || echo "")
 
