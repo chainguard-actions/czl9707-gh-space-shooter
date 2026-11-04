@@ -4,46 +4,47 @@
 
 > This file was generated automatically by the hardening agent.
 
-**Policy SHA:** `d636be7e43ef829af6e853da6b3c7566db9f72fe`
+**Policy SHA:** `374911c4be584df24e6da57af2d990570ef0f859`
 
 **Test Policy SHA:** `843adf9e4b8f85d0c08b27b9d0b09dd094b54702`
 
 **Harden Agent Version:** `2`
 
-Action **czl9707--gh-space-shooter/v2.0.5** was hardened automatically. 11 finding(s) were identified and resolved across 1 iteration(s).
+Action **czl9707--gh-space-shooter/v2.0.5** was hardened automatically. 13 finding(s) were identified and resolved across 1 iteration(s).
 
 ## Findings Fixed
 
 ### script-injection (severity: high)
 
-Rule (a): Multiple ${{ inputs.* }} expressions are directly interpolated inside run: shell command strings, allowing an attacker to inject arbitrary shell commands via user-controlled inputs.
-
-In the 'Generate game' step (line ~44): `gh-space-shooter ${{ inputs.username }} --output ${{ inputs.output-path }} --strategy ${{ inputs.strategy }} --fps ${{ inputs.fps }}` — all four inputs are interpolated directly into the shell command.
-
-In the 'Commit and push' step (line ~53): `OUTPUT_PATH="${{ inputs.output-path }}"`, `COMMIT_MSG="${{ inputs.commit-message }}"`, and `NO_AMEND="${{ inputs.no-amend }}"` — inputs are interpolated directly into shell variable assignments. An attacker controlling these inputs (e.g. via workflow_dispatch or a calling workflow) can break out of the quoted context and execute arbitrary commands.
+Rule (a): the 'Generate game' step puts expressions straight into the run: script. These include `gh-space-shooter ${{ inputs.username }} \`, `--output ${{ inputs.output-path }}`, `--strategy ${{ inputs.strategy }}`, `--fps ${{ inputs.fps }}` and `echo "output-file=${{ inputs.output-path }}" >> $GITHUB_OUTPUT`. A caller-supplied input can therefore inject shell commands.
 
 Locations:
 
-- `action.yml:44`
-- `action.yml:53`
+- `action.yml:63`
+
+### script-injection (severity: high)
+
+Rule (a): the 'Commit and push' step puts expressions straight into the run: script: `OUTPUT_PATH="${{ inputs.output-path }}"`, `COMMIT_MSG="${{ inputs.commit-message }}"` and `NO_AMEND="${{ inputs.no-amend }}"`. Shell metacharacters in an input, such as a double quote, `$(...)` or backticks, will run as commands.
+
+Locations:
+
+- `action.yml:75`
 
 ### github-env-injection (severity: high)
 
-The 'Generate game' step writes the value of ${{ inputs.output-path }} directly to $GITHUB_OUTPUT without sanitization (no `printf '%s' ... | tr -d '\n\r'` step). An attacker-controlled input containing newlines could inject additional key=value pairs into the GitHub output environment file, potentially overwriting other outputs or causing unexpected behavior.
-
-Offending line: `echo "output-file=${{ inputs.output-path }}" >> $GITHUB_OUTPUT`
+The 'Generate game' step writes the untrusted input `inputs.output-path` to $GITHUB_OUTPUT with `echo "output-file=${{ inputs.output-path }}" >> $GITHUB_OUTPUT`. Newlines are not stripped with `printf '%s' ... | tr -d '\n\r'` and no random heredoc delimiter is used, so extra output entries can be injected.
 
 Locations:
 
-- `action.yml:49`
+- `action.yml:67`
 
 ### unpinned-uses (severity: high)
 
-The action uses `actions/setup-python@v6` which is pinned to a mutable tag (`v6`) rather than an immutable 40-character commit SHA. If the tag is moved (e.g. by a supply-chain compromise of the upstream repository), the action would silently execute different code. It should be pinned to a full SHA, e.g. `actions/setup-python@<40-char-sha> # v6`.
+A composite step references an action by a mutable tag instead of a full commit SHA: `uses: actions/setup-python@v6`.
 
 Locations:
 
-- `action.yml:37`
+- `action.yml:47`
 
 ### static-inline-injection (severity: high)
 
@@ -109,17 +110,113 @@ Locations:
 
 - `action.yml:77`
 
+### prior-fix (severity: high)
+
+Carried forward from this version's previous harden, which fixed it; fix it again unless the code no longer has the problem. The previous harden changed action.yml without recording a finding for it, and this analysis reported nothing there. Re-apply its security changes unless the code no longer needs them. The previous patch:
+```diff
+diff --git a/action.yml b/action.yml
+index 840fd31..ec72db2 100644
+--- a/action.yml
++++ b/action.yml
+@@ -1,11 +1,9 @@
+ name: 'GitHub Space Shooter'
+ description: 'Transform your GitHub contribution graph into a space shooter game GIF'
+ author: 'zane'
+-
+ branding:
+   icon: 'navigation-2'
+   color: 'black'
+-
+ inputs:
+   github-token:
+     description: 'GitHub token for fetching contribution data (usually secrets.GITHUB_TOKEN)'
+@@ -34,54 +32,75 @@ inputs:
+     description: 'Commit message for the GIF update'
+     required: false
+     default: 'Update space shooter game GIF'
+-
+ outputs:
+   output-file:
+     description: 'Path to the generated output file (GIF or WebP)'
+     value: ${{ steps.generate.outputs.output-file }}
+-
+ runs:
+   using: 'composite'
+   steps:
+     - name: Set up Python
+       uses: actions/setup-python@v6
+       with:
+         python-version: '3.12'
+-
+     - name: Install gh-space-shooter
+       shell: bash
+       run: |
+         python -m pip install --upgrade pip
+         pip install gh-space-shooter
+-
+     - name: Generate game
+       id: generate
+       shell: bash
+       env:
+         GH_TOKEN: ${{ inputs.github-token }}
++        INPUT_USERNAME: ${{ inputs.username }}
++        INPUT_OUTPUT_PATH: ${{ inputs.output-path }}
++        INPUT_STRATEGY: ${{ inputs.strategy }}
++        INPUT_FPS: ${{ inputs.fps }}
+       run: |
+-        gh-space-shooter ${{ inputs.username }} \
+-          --output ${{ inputs.output-path }} \
+-          --strategy ${{ inputs.strategy }} \
+-          --fps ${{ inputs.fps }}
+-        echo "output-file=${{ inputs.output-path }}" >> $GITHUB_OUTPUT
+-
++        gh-space-shooter "$INPUT_USERNAME" \
++          --output "$INPUT_OUTPUT_PATH" \
++          --strategy "$INPUT_STRATEGY" \
++          --fps "$INPUT_FPS"
++        safe_output_path=$(printf '%s' "$INPUT_OUTPUT_PATH" | tr -d '\n\r')
++        echo "output-file=$safe_output_path" >> "$GITHUB_OUTPUT"
+     - name: Commit and push
+       shell: bash
++      env:
++        INPUT_OUTPUT_PATH: ${{ inputs.output-path }}
++        INPUT_COMMIT_MSG: ${{ inputs.commit-message }}
++        INPUT_NO_AMEND: ${{ inputs.no-amend }}
+       run: |
+         git config --local user.email "github-actions[bot]@users.noreply.github.com"
+         git config --local user.name "github-actions[bot]"
+ 
+-        OUTPUT_PATH="${{ inputs.output-path }}"
+-        COMMIT_MSG="${{ inputs.commit-message }}"
+-        NO_AMEND="${{ inputs.no-amend }}"
++        OUTPUT_PATH="$INPUT_OUTPUT_PATH"
++        COMMIT_MSG="$INPUT_COMMIT_MSG"
++        NO_AMEND="$INPUT_NO_AMEND"
+ 
+         git add "$OUTPUT_PATH"
+ 
+         SHOULD_AMEND="false"
+         if [ "$NO_AMEND" != "true" ]; then
+           git log -1 --oneline
+-        
++
+           LAST_MSG=$(git log -1 --pretty=%s 2>/dev/null || echo "")
+           LAST_FILES=$(git log -1 --name-only --pretty=format: 2>/dev/null | grep -v '^$' || echo "")
+ 
+
+```
+
+Locations:
+
+- `action.yml`
+
 ## Iteration Notes
 
 ### Iteration 1
 
-**Fixes applied:** unpinned-uses, script-injection, github-env-injection, static-inline-injection
+**Fixes applied:** script-injection, static-inline-injection, github-env-injection, unpinned-uses, prior-fix
 
 **Notes:**
 
-Fixed all findings in action.yml:
-1. Pinned actions/setup-python@v6 to full SHA ece7cb06caefa5fff74198d8649806c4678c61a1 (keeping # v6 comment).
-2. Moved all ${{ inputs.* }} expressions in 'Generate game' step (username, output-path, strategy, fps) to env: block as INPUT_USERNAME, INPUT_OUTPUT_PATH, INPUT_STRATEGY, INPUT_FPS; referenced as double-quoted shell variables.
-3. Moved all ${{ inputs.* }} expressions in 'Commit and push' step (output-path, commit-message, no-amend) to env: block as INPUT_OUTPUT_PATH, INPUT_COMMIT_MSG, INPUT_NO_AMEND; referenced as shell variables.
-4. Sanitized output-path before writing to $GITHUB_OUTPUT using `printf '%s' "$INPUT_OUTPUT_PATH" | tr -d '\n\r'` to prevent newline injection.
+Pinned actions/setup-python to ece7cb06caefa5fff74198d8649806c4678c61a1 (v6). Moved every inputs.* expression in 'Generate game' and 'Commit and push' into env: and referenced them as quoted shell variables. output-file is now written to $GITHUB_OUTPUT with \n and \r stripped. These are the same security changes as the previous harden.
 
